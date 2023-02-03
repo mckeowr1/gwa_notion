@@ -4,7 +4,7 @@ class Children:
     def __init__(self, children: Dict[str, Any] = None):
         if children is not None:
             self.result = children
-        self.result = {}
+        self.result = []
 
 class Properties:
     def __init__(self, properties: Dict[str, Any] = None):
