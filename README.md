@@ -1,22 +1,194 @@
-# Paperpile Notion Integration
 
-This repository provides a simple integration between [Paperpile](https://paperpile.com/) and [Notion](www.notion.so) using the new [Notion API](https://developers.notion.com/). The purpose is to make it easy to periodically sync a list of papers in Paperpile to a Notion database.
 
-This is a work in progress, and is currently intended for personal use only (no support, no warranty, no liability, etc.).
-
-**New**: The WIP script `download_paperpile_folder.py` provides an automated way to download a folder from a Paperpile account. This script uses Chromium and Selenium, so the chrome drivers must be placed under the path to make it work. Check the args for more information. 
-
-## Installation
-
+# Env
 Simply clone the repo locally and install the dependencies, preferably in a virtualenv:
+Dev env location
+```
+## Package Plan ##
+
+  environment location: /Users/ryanmckeown/anaconda3/envs/notion_upload
+```
 
 ```shell
-git clone https://github.com/gsarti/paperpile-notion.git
-cd paperpile-notion
+conda create -n notion_upload
+conda activate notion_upload
+codna install pip
+cd gwa_notion
 python3 -m venv venv
 pip install --upgrade pip
 pip install -r requirements.txt
 ```
+
+# GWAS Data Directory Structure
+
+1. Our GWAS results are stored on quest in `/projects/b1059/analysis/2021_GWA_analysis/data/20230330_Analysis_NemaScan`. This directory contains several sub-directories: 
+    - Reports (contains HTML reports of mappings)
+    - Phenotypes (trait files)
+    - LOCO ()
+        - Plots
+            - ManhattanPlots
+            - LDPlots
+            - EffectPlots #P x G splits for each QTL
+                - CV_length_Mancozeb_CHRV_17.66MB_effect_loco.plot.png
+                - <trait>_CHR<chrom>_<peak_id>MB_effect_<algorithm>.plot.png
+        - Mediation 
+        - Mapping
+            - Raw
+                - Raw mapping resuls
+            - Processed
+                - QTL_peaks_loco.tsv *
+                - processed_<trait>_AGGREGATE_mapping_loco.tsv
+                - <trait>_AGGREGATE_qtl_region_loco.tsv
+                - <trait>_LD_between_QTL_regions_loco.tsv
+                - 
+        - Fine_Mappings
+            - Plots 
+                - <trait>_<peak_start>.<peak_end>_finemap_plot_loco.pdf
+                - <trait>_<peak_start>.<peak_end>_gene_plot_bcsq_loco.pdf
+
+            - Data 
+                - <trait>_<peak_start>.<peak_end>.LD_loco.tsv
+                - <trait>_<peak_start>.<peak_end>.ROI_Genotype_Matrix_loco.tsv
+                - <trait>_<peak_start>.<peak_end>_bcsq_genes_loco.tsv
+                - <trait>_<peak_start>.<peak_end>.finemap_inbred.loco.fastGWA
+        - Divergent_and_haplotype
+    - INBRED
+        - Plots
+        - Mediation 
+        - Fine_Mappings
+        - Divergent_and_haplotype
+    - Genotype_matrix 
+
+
+# Notion Database
+We currently have 3 data types in the database 
+
+- Phenotype
+    - QTL 
+        - Gene Summary
+
+Each QTL has a phenotype ID and each GENE has a QTL and Phenotype ID. 
+
+
+# Uploading QTL data 
+
+To populate our QTL database, we will use `QTL_peaks_<algorithm>.tsv`files. 
+
+```
+CHROM	marker	log10p	trait	startPOS	peakPOS	endPOS	peak_id	narrow_h2
+V	V:18040094	4.328322779723392	CV_length_Thiabendazole	17659349	18040094	18674756	1	0.013061552280705586
+III	III:2878048	4.236260624118633	CV_length_Levamisole	2763660	2878048	2976570	1	0.1761694279292411
+```
+
+We use our function in `add_QTL.py` to read-in the peaks file and build a dictionary for each row in the file and uses the information to create a page within a notion database 
+
+```
+for i, row in enumerate(csv_reader):
+
+    formatted_entry = {
+        'ID':      {'type': 'title',        'value': row['marker']},
+        'Phenotype':     {'type': 'multi_select', 'value': [row['trait']]},
+        'log10p':      {'type': 'text',        'value': row['log10p']},
+        'startPOS':      {'type': 'text',        'value': row['startPOS']},
+        'peakPOS':      {'type': 'text',        'value': row['peakPOS']},
+        'endPOS':      {'type': 'text',        'value': row['endPOS']},
+        'peak_id':      {'type': 'text',        'value': row['peak_id']},
+        'narrow_h2':      {'type': 'text',        'value': row['narrow_h2']},
+    }
+    
+    notion.create_page(formatted_entry)
+```
+
+# Uploading Gene Data 
+
+Our gene database is populated from a gene summary tsv script that produces the 10 genes with the most significant variants from finemapping. 
+
+# Adding plots to pages - DEV** 
+
+We would like some of the data to automatically uploaded to the pages, or at least linked to it.
+
+To do this we first need to make sure the plots we want to display are hosted somewhere. Currently they are on my github URL ex) `https://mckeowr1.github.io/gwas_results/20221102_Thiabendazole_CV_combined_GWA_status.png`
+
+Things we want to add plots to: 
+- Phenotypes 
+    - Trait distribution 
+    - HTML Report 
+    - Manhattan Plots
+- QTL 
+    -
+
+### Data strucutre for uploading to notion database 
+
+
+```{bash}
+curl 'https://api.notion.com/v1/pages' \
+  -H 'Authorization: Bearer '"$NOTION_API_KEY"'' \
+  -H "Content-Type: application/json" \
+  -H "Notion-Version: 2022-06-28" \
+  --data '{
+	"parent": { "database_id": "d9824bdc84454327be8b5b47500af6ce" },
+  "icon": {
+  	"emoji": "🥬"
+  },
+	"cover": {
+		"external": {
+			"url": "https://upload.wikimedia.org/wikipedia/commons/6/62/Tuscankale.jpg"
+		}
+	},
+	"properties": {
+		"Name": {
+			"title": [
+				{
+					"text": {
+						"content": "Tuscan Kale"
+					}
+				}
+			]
+		},
+		"Description": {
+			"rich_text": [
+				{
+					"text": {
+						"content": "A dark green leafy vegetable"
+					}
+				}
+			]
+		},
+		"Food group": {
+			"select": {
+				"name": "Vegetable"
+			}
+		},
+		"Price": { "number": 2.5 }
+	},
+	"children": [
+		{
+			"object": "block",
+			"type": "heading_2",
+			"heading_2": {
+				"rich_text": [{ "type": "text", "text": { "content": "Lacinato kale" } }]
+			}
+		},
+		{
+			"object": "block",
+			"type": "paragraph",
+			"paragraph": {
+				"rich_text": [
+					{
+						"type": "text",
+						"text": {
+							"content": "Lacinato kale is a variety of kale with a long tradition in Italian cuisine, especially that of Tuscany. It is also known as Tuscan kale, Italian kale, dinosaur kale, kale, flat back kale, palm tree kale, or black Tuscan palm.",
+							"link": { "url": "https://en.wikipedia.org/wiki/Lacinato_kale" }
+						}
+					}
+				]
+			}
+		}
+	]
+}'
+
+```
+
 
 ## Requirements
 
