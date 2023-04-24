@@ -307,7 +307,52 @@ def createQTLPage(databaseId, headers, qtl_data):
     #return the page id so we can create something in it
     return(res_dict['id'])
 
+def formatQTL(qtl_row, host_page, algorithm):
+    #Format the QTL data into a dictionary
+    #algorithm is either "inbred" or "loco"
+    formatted_entry = {
+    'ID': qtl_row['marker'],
+    'CHROM': qtl_row['CHROM'],
+    'Trait': qtl_row['trait'],
+    'log10p': qtl_row['log10p'],
+    'startPOS': qtl_row['startPOS'],
+    'peakPOS': qtl_row['peakPOS'],
+    'endPOS': qtl_row['endPOS'],
+    'peak_id': qtl_row['peak_id'],
+    'narrow_h2': qtl_row['narrow_h2'],
+    'Status': 'Active',
+    'Algorithim' : algorithm,
 
+    #Combine the trait and marker into a single string divide the peak position by 1000 and round to four digits
+    'pxg': host_page + "EffectPlots/" + qtl_row['trait'] + '_' + "CHR" + qtl_row['CHROM'] + '_' + str(round(int(qtl_row['peakPOS'])/1000000, 2)) + 'MB_effect_' + algorithm + 'plot.png',
+    #'ld' : host_page + qtl_row['trait'] + '_' + "CHR" + qtl_row['CHROM'] + '_' + str(round(int(qtl_row['peakPOS'])/1000000, 2)) + 'MB_LD.png'
+    #fine mapping LD plot - ex) CV_length_Monepantel_LY3348298_0_55.III.8220.1574164_finemap_plot_loco.pdf
+    'fine_ld': host_page + qtl_row['trait'] + '.' + qtl_row['CHROM'] + '.' + qtl_row['startPOS'] + '.' + qtl_row['endPOS'] + "_finemap_plot_" + algorithm + ".pdf",
+    
+    #BCSQ GENE plots - ex) CV_length_Copper_chloride_V_15173542-16832320_gene_plot_bcsq_loco.pdf
+    'bcsq_gene': host_page + qtl_row['trait'] + '_' + qtl_row['CHROM'] + '_' + qtl_row['startPOS'] + '-' + qtl_row['endPOS'] + "_gene_plot_bcsq_" + algorithm + ".pdf", 
+
+    #Mediation - ex) length_Zoetis_7027187_emed_detailed_plot_loco.png
+    'mediation': host_page + qtl_row['trait'] + "_emed_detailed_plot_" + algorithm + ".png"
+    }
+    return(formatted_entry)
+
+def formatGENE(gene_row):
+    formatted_entry = {
+        'GENE_NAME': gene_row['GENE_NAME'],
+        'CHROM': gene_row['CHROM'],
+        'POS': gene_row['POS'],
+        'VARIANT_IMPACT': gene_row['VARIANT_IMPACT'],
+        'VARIANT_LD_WITH_PEAK_MARKER': gene_row['VARIANT_LD_WITH_PEAK_MARKER'],
+        'VARIANT_LOG10p': gene_row['VARIANT_LOG10p'],
+        'pct.divergent.ALT': gene_row['pct.divergent.ALT'],
+        'pct.divergent.REF': gene_row['pct.divergent.REF'],
+        'MAF_variant': gene_row['MAF_variant'],
+        'Status': 'Active',
+
+        #Could add URL to wormbase if we wanted
+    }
+    return(formatted_entry)
 
 
 #Create Gene Data base within each page
@@ -337,34 +382,10 @@ csv_reader = csv.DictReader(csv_file, delimiter='\t')
 host_page = "https://mckeowr1.github.io/gwas_results/"
 
 
-for i, row in enumerate(csv_reader):
+for i, qtl_row in enumerate(csv_reader):
 
-    formatted_entry = {
-        'ID': row['marker'],
-        'CHROM': row['CHROM'],
-        'Trait': row['trait'],
-        'log10p': row['log10p'],
-        'startPOS': row['startPOS'],
-        'peakPOS': row['peakPOS'],
-        'endPOS': row['endPOS'],
-        'peak_id': row['peak_id'],
-        'narrow_h2': row['narrow_h2'],
-        'Status': 'Active',
-        'Algorithim' : "LOCO",
-
-
-        #Combine the trait and marker into a single string divide the peak position by 1000 and round to four digits
-        'pxg': host_page + "EffectPlots/" + row['trait'] + '_' + "CHR" + row['CHROM'] + '_' + str(round(int(row['peakPOS'])/1000000, 2)) + 'MB_effect_loco.plot.png',
-        #'ld' : host_page + row['trait'] + '_' + "CHR" + row['CHROM'] + '_' + str(round(int(row['peakPOS'])/1000000, 2)) + 'MB_LD.png'
-        #fine mapping LD plot - ex) CV_length_Monepantel_LY3348298_0_55.III.8220.1574164_finemap_plot_loco.pdf
-        'fine_ld': host_page + row['trait'] + '.' + row['CHROM'] + '.' + row['startPOS'] + '.' + row['endPOS'] + "_finemap_plot_loco.pdf",
-        
-        #BCSQ GENE plots - ex) CV_length_Copper_chloride_V_15173542-16832320_gene_plot_bcsq_loco.pdf
-        'bcsq_gene': host_page + row['trait'] + '_' + row['CHROM'] + '_' + row['startPOS'] + '-' + row['endPOS'] + "_gene_plot_bcsq_loco.pdf", 
- 
-        #Mediation - ex) length_Zoetis_7027187_emed_detailed_plot_loco.png
-        'mediation': host_page + row['trait'] + "_emed_detailed_plot_loco.png"
-    }
+    #Format the QTL data into a dictionary
+    formatted_entry = formatQTL(qtl_row, host_page)
     
     QTL_PID = createQTLPage(databaseId, headers, formatted_entry)
     # Create a new page in the database for each row in the CSV file
@@ -375,28 +396,14 @@ for i, row in enumerate(csv_reader):
     candidate_gene_dir = "20230411candidate_genes"
 
     #Search the candidate gene_dir for the QTL ID
-    print("Searching for candidate genes file for QTL: " + row['trait'] + "_" + row['CHROM'] + "_" + row['startPOS'] + "-" + row['endPOS'] + "_" + "loco_candidates.csv")
+    print("Searching for candidate genes file for QTL: " + qtl_row['trait'] + "_" + qtl_row['CHROM'] + "_" + qtl_row['startPOS'] + "-" + qtl_row['endPOS'] + "_" + "loco_candidates.csv")
     for file in os.listdir(candidate_gene_dir):
-        if file == (row['trait'] + "_" + row['CHROM'] + "_" + row['startPOS'] + "-" + row['endPOS'] + "_" + "loco_candidates.csv"):
+        if file == (qtl_row['trait'] + "_" + qtl_row['CHROM'] + "_" + qtl_row['startPOS'] + "-" + qtl_row['endPOS'] + "_" + "loco_candidates.csv"):
             print("Found file: " + file)
             candidate_gene_file = open(candidate_gene_dir + "/" + file, 'r+')
             csv_reader = csv.DictReader(candidate_gene_file)
             for i, gene_row in enumerate(csv_reader):
-
-                formatted_entry = {
-                    'GENE_NAME': gene_row['GENE_NAME'],
-                    'CHROM': gene_row['CHROM'],
-                    'POS': gene_row['POS'],
-                    'VARIANT_IMPACT': gene_row['VARIANT_IMPACT'],
-                    'VARIANT_LD_WITH_PEAK_MARKER': gene_row['VARIANT_LD_WITH_PEAK_MARKER'],
-                    'VARIANT_LOG10p': gene_row['VARIANT_LOG10p'],
-                    'pct.divergent.ALT': gene_row['pct.divergent.ALT'],
-                    'pct.divergent.REF': gene_row['pct.divergent.REF'],
-                    'MAF_variant': gene_row['MAF_variant'],
-                    'Status': 'Active',
-
-                    #Could add URL to wormbase if we wanted
-                }
+                formatted_entry = formatGENE(gene_row)
                 createGENEPage(gene_db_id, headers, formatted_entry)
             
             candidate_gene_file.close()
