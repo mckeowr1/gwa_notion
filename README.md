@@ -67,8 +67,20 @@ We currently have 3 data types in the database
     - QTL 
         - Gene Summary
 
-Each QTL has a phenotype ID and each GENE has a QTL and Phenotype ID. 
+Each Drug condition has a page with two traits for the drug response
+    - Length 
+    - C.V length
+Every identified QTL from the GWAS is stored in the 2021 QTL database.
 
+Each QTL page in the database has a table with the candidate genes for that QTL
+
+# Running upload script
+```{python}
+python qt_page_dict.py
+```
+NEED TO:
+- ADD COMMAND LINE ARGS FOR (CANDIDATE GENE DIR, LOCO_PEAKS.TSV, INBRED_PEAKS.TSV)
+- PLACE FOR HOST DB INFORMATION (BEST PRACTICE?)
 
 # Uploading QTL data 
 

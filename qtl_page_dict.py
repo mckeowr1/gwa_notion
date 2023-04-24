@@ -240,7 +240,16 @@ def createQTLPage(databaseId, headers, qtl_data):
                         }
                     }
                 ]
-            }   
+            },
+            "algorithm": {
+                "rich_text": [
+                    {
+                        "text": {
+                            "content": qtl_data['Algorithim']
+                        }
+                    }
+                ]
+            }               
         },
 
     "children": [
@@ -376,16 +385,16 @@ headers = {
 
 
 # Load the QTL CSV file
-csv_file = open("QTL_peaks_loco.tsv", 'r+')
-csv_reader = csv.DictReader(csv_file, delimiter='\t')
+loco_peaks_file = open("single_QTL_peaks_loco.tsv", 'r+')
+loco_csv_reader = csv.DictReader(loco_peaks_file, delimiter='\t')
 
 host_page = "https://mckeowr1.github.io/gwas_results/"
 
 
-for i, qtl_row in enumerate(csv_reader):
+for i, qtl_row in enumerate(loco_csv_reader):
 
     #Format the QTL data into a dictionary
-    formatted_entry = formatQTL(qtl_row, host_page)
+    formatted_entry = formatQTL(qtl_row, host_page, "loco")
     
     QTL_PID = createQTLPage(databaseId, headers, formatted_entry)
     # Create a new page in the database for each row in the CSV file
@@ -410,3 +419,35 @@ for i, qtl_row in enumerate(csv_reader):
 
     #createGENEPage(gene_db_id, headers)
     
+### INBRED QTL ###
+
+# Load the QTL CSV file
+inbred_peaks_file = open("single_QTL_peaks_inbred.tsv", 'r+')
+inbred_csv_reader = csv.DictReader(inbred_peaks_file, delimiter='\t')
+
+
+for i, qtl_row in enumerate(inbred_csv_reader):
+
+    #Format the QTL data into a dictionary
+    formatted_entry = formatQTL(qtl_row, host_page, "inbred")
+    
+    QTL_PID = createQTLPage(databaseId, headers, formatted_entry)
+    # Create a new page in the database for each row in the CSV file
+#Create a gene database in the QTL page
+    gene_db_id = createGENEDb(QTL_PID, headers)
+    
+    #Get the candidate gene data for the QTL
+    candidate_gene_dir = "20230411candidate_genes"
+
+    #Search the candidate gene_dir for the QTL ID
+    print("Searching for candidate genes file for QTL: " + qtl_row['trait'] + "_" + qtl_row['CHROM'] + "_" + qtl_row['startPOS'] + "-" + qtl_row['endPOS'] + "_" + "inbred_candidates.csv")
+    for file in os.listdir(candidate_gene_dir):
+        if file == (qtl_row['trait'] + "_" + qtl_row['CHROM'] + "_" + qtl_row['startPOS'] + "-" + qtl_row['endPOS'] + "_" + "inbred_candidates.csv"):
+            print("Found file: " + file)
+            candidate_gene_file = open(candidate_gene_dir + "/" + file, 'r+')
+            csv_reader = csv.DictReader(candidate_gene_file)
+            for i, gene_row in enumerate(csv_reader):
+                formatted_entry = formatGENE(gene_row)
+                createGENEPage(gene_db_id, headers, formatted_entry)
+            
+            candidate_gene_file.close()
