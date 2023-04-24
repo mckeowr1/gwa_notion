@@ -110,7 +110,7 @@ def createGENEPage(page_id, headers, gene_data):
     res_dict = json.loads(res.text)
     page_id = res_dict['id']
 
-def updatePage(pageId, headers):
+def createGENEDb(pageId, headers):
     updateUrl = 'https://api.notion.com/v1/databases/'
 
     gene_page_format = {
@@ -244,12 +244,43 @@ def createQTLPage(databaseId, headers, qtl_data):
         },
 
     "children": [
+
+            {   "object": "block",
+            "type": "pdf",
+            "pdf": {
+            "type" : "external",
+            "external": {
+                "url": qtl_data['fine_ld']
+            }
+             
+            }
+        },
+            {   "object": "block",
+            "type": "pdf",
+            "pdf": {
+            "type" : "external",
+            "external": {
+                "url": qtl_data['bcsq_gene']
+            }
+             
+            }
+        },        
         {   "object": "block",
             "type": "image",
             "image": {
             "type" : "external",
             "external": {
                 "url": qtl_data['pxg']
+            }
+             
+            }
+        },
+        {   "object": "block",
+            "type": "image",
+            "image": {
+            "type" : "external",
+            "external": {
+                "url": qtl_data['mediation']
             }
              
             }
@@ -272,41 +303,10 @@ def createQTLPage(databaseId, headers, qtl_data):
 
     print("QTL Page Created, Creating Gene Page in " + res_dict['id'])
     
-    #Add the gene table to the QTL page
-    gene_db_id = updatePage(res_dict['id'], headers)
-    
-    #Get the candidate gene data for the QTL
-    candidate_gene_dir = "20230411candidate_genes"
+  
+    #return the page id so we can create something in it
+    return(res_dict['id'])
 
-    #Search the candidate gene_dir for the QTL ID
-    print("Searching for candidate genes file for QTL: " + qtl_data['Trait'] + "_" + qtl_data['CHROM'] + "_" + qtl_data['startPOS'] + "-" + qtl_data['endPOS'] + "_" + "loco_candidates.csv")
-    for file in os.listdir(candidate_gene_dir):
-        if file == (qtl_data['Trait'] + "_" + qtl_data['CHROM'] + "_" + qtl_data['startPOS'] + "-" + qtl_data['endPOS'] + "_" + "loco_candidates.csv"):
-            print("Found file: " + file)
-            candidate_gene_file = open(candidate_gene_dir + "/" + file, 'r+')
-            csv_reader = csv.DictReader(candidate_gene_file)
-            for i, row in enumerate(csv_reader):
-
-                formatted_entry = {
-                    'GENE_NAME': row['GENE_NAME'],
-                    'CHROM': row['CHROM'],
-                    'POS': row['POS'],
-                    'VARIANT_IMPACT': row['VARIANT_IMPACT'],
-                    'VARIANT_LD_WITH_PEAK_MARKER': row['VARIANT_LD_WITH_PEAK_MARKER'],
-                    'VARIANT_LOG10p': row['VARIANT_LOG10p'],
-                    'pct.divergent.ALT': row['pct.divergent.ALT'],
-                    'pct.divergent.REF': row['pct.divergent.REF'],
-                    'MAF_variant': row['MAF_variant'],
-                    'Status': 'Active',
-
-                    #Could add URL to wormbase if we wanted
-                }
-                createGENEPage(gene_db_id, headers, formatted_entry)
-            
-            candidate_gene_file.close()
-
-    #createGENEPage(gene_db_id, headers)
-    
 
 
 
@@ -334,7 +334,7 @@ headers = {
 csv_file = open("QTL_peaks_loco.tsv", 'r+')
 csv_reader = csv.DictReader(csv_file, delimiter='\t')
 
-host_page = "https://mckeowr1.github.io/gwas_results/EffectPlots/"
+host_page = "https://mckeowr1.github.io/gwas_results/"
 
 
 for i, row in enumerate(csv_reader):
@@ -350,13 +350,56 @@ for i, row in enumerate(csv_reader):
         'peak_id': row['peak_id'],
         'narrow_h2': row['narrow_h2'],
         'Status': 'Active',
+        'Algorithim' : "LOCO",
+
 
         #Combine the trait and marker into a single string divide the peak position by 1000 and round to four digits
-        'pxg': host_page + row['trait'] + '_' + "CHR" + row['CHROM'] + '_' + str(round(int(row['peakPOS'])/1000000, 2)) + 'MB_effect_loco.plot.png',
-        #'ld' : host_page + row['trait'] + '_' + "CHR" + row['CHROM'] + '_' + str(round(int(row['peakPOS'])/1000000, 2)) + 'MB_LD.png',
-        #'fine_mapping' : 
+        'pxg': host_page + "EffectPlots/" + row['trait'] + '_' + "CHR" + row['CHROM'] + '_' + str(round(int(row['peakPOS'])/1000000, 2)) + 'MB_effect_loco.plot.png',
+        #'ld' : host_page + row['trait'] + '_' + "CHR" + row['CHROM'] + '_' + str(round(int(row['peakPOS'])/1000000, 2)) + 'MB_LD.png'
+        #fine mapping LD plot - ex) CV_length_Monepantel_LY3348298_0_55.III.8220.1574164_finemap_plot_loco.pdf
+        'fine_ld': host_page + row['trait'] + '.' + row['CHROM'] + '.' + row['startPOS'] + '.' + row['endPOS'] + "_finemap_plot_loco.pdf",
+        
+        #BCSQ GENE plots - ex) CV_length_Copper_chloride_V_15173542-16832320_gene_plot_bcsq_loco.pdf
+        'bcsq_gene': host_page + row['trait'] + '_' + row['CHROM'] + '_' + row['startPOS'] + '-' + row['endPOS'] + "_gene_plot_bcsq_loco.pdf", 
+ 
+        #Mediation - ex) length_Zoetis_7027187_emed_detailed_plot_loco.png
+        'mediation': host_page + row['trait'] + "_emed_detailed_plot_loco.png"
     }
-
-createQTLPage(databaseId, headers, formatted_entry)
+    
+    QTL_PID = createQTLPage(databaseId, headers, formatted_entry)
     # Create a new page in the database for each row in the CSV file
+#Create a gene database in the QTL page
+    gene_db_id = createGENEDb(QTL_PID, headers)
+    
+    #Get the candidate gene data for the QTL
+    candidate_gene_dir = "20230411candidate_genes"
 
+    #Search the candidate gene_dir for the QTL ID
+    print("Searching for candidate genes file for QTL: " + row['trait'] + "_" + row['CHROM'] + "_" + row['startPOS'] + "-" + row['endPOS'] + "_" + "loco_candidates.csv")
+    for file in os.listdir(candidate_gene_dir):
+        if file == (row['trait'] + "_" + row['CHROM'] + "_" + row['startPOS'] + "-" + row['endPOS'] + "_" + "loco_candidates.csv"):
+            print("Found file: " + file)
+            candidate_gene_file = open(candidate_gene_dir + "/" + file, 'r+')
+            csv_reader = csv.DictReader(candidate_gene_file)
+            for i, gene_row in enumerate(csv_reader):
+
+                formatted_entry = {
+                    'GENE_NAME': gene_row['GENE_NAME'],
+                    'CHROM': gene_row['CHROM'],
+                    'POS': gene_row['POS'],
+                    'VARIANT_IMPACT': gene_row['VARIANT_IMPACT'],
+                    'VARIANT_LD_WITH_PEAK_MARKER': gene_row['VARIANT_LD_WITH_PEAK_MARKER'],
+                    'VARIANT_LOG10p': gene_row['VARIANT_LOG10p'],
+                    'pct.divergent.ALT': gene_row['pct.divergent.ALT'],
+                    'pct.divergent.REF': gene_row['pct.divergent.REF'],
+                    'MAF_variant': gene_row['MAF_variant'],
+                    'Status': 'Active',
+
+                    #Could add URL to wormbase if we wanted
+                }
+                createGENEPage(gene_db_id, headers, formatted_entry)
+            
+            candidate_gene_file.close()
+
+    #createGENEPage(gene_db_id, headers)
+    

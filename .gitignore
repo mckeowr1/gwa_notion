@@ -8,4 +8,6 @@ __pycache__/
 /paperpile
 /cookies.pkl
 /SECRET.md
-data/  
+data/
+20230411candidate_genes/*
+QTL_peaks_*.tsv  

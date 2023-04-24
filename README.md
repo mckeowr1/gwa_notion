@@ -103,6 +103,48 @@ for i, row in enumerate(csv_reader):
 
 Our gene database is populated from a gene summary tsv script that produces the 10 genes with the most significant variants from finemapping. 
 
+After generating our QTL page, we populate the page with candidate gene data base. 
+
+First we retrieve the ID of the QTL page we just created as we will need to that to specify where we want to build the candidate gene table. 
+
+```{python}
+    #Save return of funtion - page ID as a variable
+    QTL_PID = createQTLPage(databaseId, headers, formatted_entry)
+
+    #Create a child database of specified format in the QTL page
+    gene_db_id = createGENEDb(QTL_PID, headers)
+```
+The loop will then search for the QTL ID in the candidate gene files and pull the gene files that match into the script where they get formated and pasted into the candidate gene database - THIS SHOULD BE ITS OWN FUNCTION
+
+```{python}
+print("Searching for candidate genes file for QTL: " + row['trait'] + "_" + row['CHROM'] + "_" + row['startPOS'] + "-" + row['endPOS'] + "_" + "loco_candidates.csv")
+    for file in os.listdir(candidate_gene_dir):
+        if file == (row['trait'] + "_" + row['CHROM'] + "_" + row['startPOS'] + "-" + row['endPOS'] + "_" + "loco_candidates.csv"):
+            print("Found file: " + file)
+            candidate_gene_file = open(candidate_gene_dir + "/" + file, 'r+')
+            csv_reader = csv.DictReader(candidate_gene_file)
+            for i, gene_row in enumerate(csv_reader):
+
+                formatted_entry = {
+                    'GENE_NAME': gene_row['GENE_NAME'],
+                    'CHROM': gene_row['CHROM'],
+                    'POS': gene_row['POS'],
+                    'VARIANT_IMPACT': gene_row['VARIANT_IMPACT'],
+                    'VARIANT_LD_WITH_PEAK_MARKER': gene_row['VARIANT_LD_WITH_PEAK_MARKER'],
+                    'VARIANT_LOG10p': gene_row['VARIANT_LOG10p'],
+                    'pct.divergent.ALT': gene_row['pct.divergent.ALT'],
+                    'pct.divergent.REF': gene_row['pct.divergent.REF'],
+                    'MAF_variant': gene_row['MAF_variant'],
+                    'Status': 'Active',
+
+                    #Could add URL to wormbase if we wanted
+                }
+                createGENEPage(gene_db_id, headers, formatted_entry)
+            
+            candidate_gene_file.close()
+```
+
+
 # Adding plots to pages - DEV** 
 
 We would like some of the data to automatically uploaded to the pages, or at least linked to it.
@@ -115,7 +157,13 @@ Things we want to add plots to:
     - HTML Report 
     - Manhattan Plots
 - QTL 
-    -
+    - PxG Split 
+    - Fine mapping 
+    - LD fine mapping
+    - Mediation
+    - Candidate genes DB
+
+
 
 ### Data strucutre for uploading to notion database 
 
